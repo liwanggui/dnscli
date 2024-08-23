@@ -3,30 +3,30 @@ from ..dns.aliyun import AliApi, aliyun_lines
 
 DNS_SERVER = "aliyun"
 
-def get_domains(alidns, header=True, border=True, number=True):
+def get_domains(dns, args):
     title = ("域名", "创建时间", "记录数")
-    data = [[d.domain_name, d.create_time, d.record_count] for d in alidns.get_domain()]
-    return prettyprint(title, data, header=header, border=border, number=number)
+    data = [[d.domain_name, d.create_time, d.record_count] for d in dns.get_domain()]
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def get_records(alidns, args, header=True, border=True, number=True):
+def get_records(dns, args):
     title = ("子域名", "记录类型", "记录值", "线路", "TTL", "记录 ID", "创建时间", "更新时间")
-    record_list = alidns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
+    record_list = dns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
     data = [[r.sub_domain, r.type, r.value, r.line, r.ttl, r.record_id, r.create_timestamp, r.update_timestamp] for r in record_list]
     data = sorted(data, key= lambda x: x[1]) # 按记录类型排序
-    return prettyprint(title, data, header=header, border=border, number=number)
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def create_record(alidns, args, header=True, border=True, number=True):
+def create_record(dns, args):
     title = ("子域名", "记录类型", "记录值", "线路", "TTL", "执行状态")
     data = []
-    record = alidns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
+    record = dns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
     if record and args.value in [r.value for r in record]:
         data.append([args.name, args.type, args.value, args.line, args.ttl, "记录已存在"])
     else:
-        code = alidns.create_record(domain=args.domain, sub_domain=args.name, record_type=args.type, value=args.value, line=args.line, ttl=args.ttl)
+        code = dns.create_record(domain=args.domain, sub_domain=args.name, record_type=args.type, value=args.value, line=args.line, ttl=args.ttl, priority=args.priority)
         data.append([args.name, args.type, args.value, args.line, args.ttl, "创建成功" if code else "创建失败"])
-    prettyprint(title, data, header=header, border=border, number=number)
+    prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def _change_record(alidns, args, header=True, border=True, number=True):
+def _change_record(dns, args):
     title = ("子域名", "记录类型", "记录值", "线路", "TTL", "记录ID", "执行状态")
     data = []
     args.new_name = args.new_name or args.name
@@ -46,16 +46,16 @@ def _change_record(alidns, args, header=True, border=True, number=True):
 
     data.append([args.new_name, args.new_type, args.new_value, args.new_line, args.new_ttl, args.record_id])
 
-    if alidns.change_record(domain=args.domain, sub_domain=args.new_name, record_id=args.record_id, 
+    if dns.change_record(domain=args.domain, sub_domain=args.new_name, record_id=args.record_id, 
                             record_type=args.new_type, value=args.new_value, line=args.new_line, ttl=args.new_ttl):
         data[0].append("修改成功")
     else:
         data[0].append("修改失败")
-    return prettyprint(title, data, header=header, border=border, number=number)
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def change_record(alidns, args, header=True, border=True, number=True):
+def change_record(dns, args):
     if args.name and args.value:
-        records = alidns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
+        records = dns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
         if not records:
             raise SystemExit("您要更改的 DNS 记录不存在，请检查参数后重试")
         for r in records:
@@ -63,7 +63,7 @@ def change_record(alidns, args, header=True, border=True, number=True):
                 args.record_id = r.record_id
                 break
     elif args.record_id:
-        records = alidns.get_record(domain=args.domain)
+        records = dns.get_record(domain=args.domain)
         if not records:
             raise SystemExit("您要更改的 DNS 记录不存在，请检查后重试")
         if not records or args.record_id not in [r.record_id for r in records]:
@@ -78,48 +78,45 @@ def change_record(alidns, args, header=True, border=True, number=True):
                 break
     else:
         raise SystemExit("缺少必要的参数，请检查后重试")
-    return _change_record(alidns, args, header=header, border=border, number=number)
+    return _change_record(dns, args, header=args.header, border=args.border, number=args.number)
 
-def delete_record(alidns, args, header=True, border=True, number=True):
+def delete_record(dns, args):
     if args.record_id:
         title = ("子域名", "记录ID", "执行状态")
-        data = [[args.name, args.record_id, "删除成功" if alidns.del_record(record_id=args.record_id) else "删除失败"]]
+        data = [[args.name, args.record_id, "删除成功" if dns.del_record(record_id=args.record_id) else "删除失败"]]
         return prettyprint(title, data)
-    
+
+    if args.name is None:
+        raise SystemExit("缺少必要参数, 请提供子域名后重试")
+
     if any((args.type, args.line)):
-        record_list = alidns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
+        record_list = dns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
         title = ("子域名", "记录类型", "记录值", "线路", "TTL", "执行状态")
         data = []
         if not record_list:
             data.append([args.name, args.type, "", args.line, "", "无记录, 删除失败"])
             return prettyprint(title, data)
         for r in record_list:
-            if alidns.del_record(record_id=r.record_id):
+            if dns.del_record(record_id=r.record_id):
                 data.append([r.sub_domain, r.type, r.value, r.line, r.ttl, "删除成功"])
             else:
                 data.append([r.sub_domain, r.type, r.value, r.line, r.ttl, "删除失败"])
         return prettyprint(title, data)
     
     title = ("子域名", "执行状态")
-    data = [[args.name, "删除成功" if alidns.del_record_by_domain(domain=args.domain, sub_domain=args.name) else "删除失败"]]
-    return prettyprint(title, data, header=header, border=border, number=number)
-
+    data = [[args.name, "删除成功" if dns.del_record_by_domain(domain=args.domain, sub_domain=args.name) else "删除失败"]]
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
 def main():
     args = main_cli(DNS_SERVER)
-    # print(args)
 
     if args.func in ("configure", "config"):
         return write_config(DNS_SERVER, args.secret_id, args.secret_key)
 
-    header = not args.no_header
-    border = not args.no_border
-    number = not args.no_number
-
     if args.func in ("list-line", "ll"):
         title = ["线路代码", "中文说明"]
         data = [[k, v] for k, v in aliyun_lines.items()]
-        return prettyprint(title, data, header=header, border=border, number=number)
+        return prettyprint(title, data)
 
     if all((args.secret_id, args.secret_key)):
         secret_id = args.secret_id
@@ -135,16 +132,16 @@ def main():
     alidns = AliApi(secret_id, secret_key)
 
     if args.func in ("list-domain", "ld"):
-        return get_domains(alidns, header=header, border=border, number=number)
+        return get_domains(alidns, args)
 
     if args.func in ("list", "ls"):
-        return get_records(alidns, args, header=header, border=border, number=number)
+        return get_records(alidns, args)
     
     if args.func in ("create", "add"):
-        return create_record(alidns, args, header=header, border=border, number=number)
+        return create_record(alidns, args)
 
     if args.func in ("change", "update"):
-        return change_record(alidns, args, header=header, border=border, number=number)
+        return change_record(alidns, args)
 
     if args.func in ("delete", "del"):
-        return delete_record(alidns, args, header=header, border=border, number=number)
+        return delete_record(alidns, args)

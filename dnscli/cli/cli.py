@@ -13,7 +13,7 @@ from .. import print_version
 { "aliyun": { "secret_id": "", "secret_key": "" }, "dnspod": { "secret_id": "", "secret_key": "" } }
 """
 CONFIG_DIR = "~/.config/dnscli.json"
-
+RECORD_TYPES = ("A", "AAAA", "TXT", "CNAME", "NS", "MX")
 
 class VersionAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -37,9 +37,9 @@ class DnsCli:
     def prettyprint_parameter(self):
         prettyprint_parser = argparse.ArgumentParser(add_help=False)
         prettyprint = prettyprint_parser.add_argument_group("prettytable arguments")
-        prettyprint.add_argument("--no-header", action="store_true", help="输出信息标题开关，默认显示")
-        prettyprint.add_argument("--no-border", action="store_true", help="输出信息边框开关，默认显示")
-        prettyprint.add_argument("--no-number", action="store_true", help="输出信息序号开关，默认显示")
+        prettyprint.add_argument("--header", action=argparse.BooleanOptionalAction, default=True, help="输出信息标题开关，默认显示")
+        prettyprint.add_argument("--border", action=argparse.BooleanOptionalAction, default=True, help="输出信息边框开关，默认显示")
+        prettyprint.add_argument("--number", action=argparse.BooleanOptionalAction, default=True, help="输出信息序号开关，默认显示")
         return prettyprint_parser
 
     def public_parameter(self, default_type="A", default_line="default"):
@@ -47,14 +47,14 @@ class DnsCli:
         public_parser.add_argument("domain", metavar="DOMAIN", help="主域名")
         public_parser.add_argument("-n", "--name", metavar="", help="子域名")
         if default_type is None:
-            type_help_msg="解析记录类型"
+            type_help_msg=f'解析记录类型, 可用值：{"|".join(RECORD_TYPES)}'
         else:
-            type_help_msg=f'解析记录类型，默认值: "{default_type}"'
+            type_help_msg=f'解析记录类型, 可用值：{"|".join(RECORD_TYPES)}，默认值: "{default_type}"'
         if default_line is None:
             line_help_msg="解析线路名"
         else:
             line_help_msg=f'解析线路名，默认值: "{default_line}"'
-        public_parser.add_argument("-t", "--type", metavar="", default=default_type, help=type_help_msg)
+        public_parser.add_argument("-t", "--type", metavar="", default=default_type, choices=RECORD_TYPES, help=type_help_msg)
         public_parser.add_argument("-l", "--line", metavar="", default=default_line, help=line_help_msg)
         return public_parser
 
@@ -152,11 +152,12 @@ def main_cli(dns_server: str, default_type: str = None, default_line: str = "def
     dnscli.add_subparser("list-line", help="查看解析线路", parents=[auth_parameter, prettyprint_parameter, line_parameter], aliases=["ll"])
 
     # list
-    dnscli.add_subparser(name="list", help="获取 DNS 解析记录", parents=[auth_parameter, prettyprint_parameter, dnscli.public_parameter(default_type=default_type, default_line=default_line)], aliases=["ls"])
+    dnscli.add_subparser(name="list", help="获取 DNS 解析记录", parents=[auth_parameter, prettyprint_parameter, dnscli.public_parameter(default_type=default_type, default_line=None)], aliases=["ls"])
 
     # create or add
     create_parameter = dnscli.public_parameter(default_line=default_line)
     create_parameter.add_argument("-v", "--value", metavar="", help="解析记录值")
+    create_parameter.add_argument("-p", "--priority", metavar="", type=int, default=10, help="MX 解析记录优先级，默认值: 10")
     create_parameter.add_argument("--ttl", metavar="", type=int, default=600, help="解析记录缓存时间，默认值: 600")
     dnscli.add_subparser(name="create", help="创建 DNS 解析记录", parents=[auth_parameter, prettyprint_parameter, create_parameter], aliases=["add"])
 
@@ -166,7 +167,7 @@ def main_cli(dns_server: str, default_type: str = None, default_line: str = "def
     old_group = change_parameter.add_argument_group("old record arguments")
     old_group.add_argument("-n", "--name", metavar="", help="子域名")
     old_group.add_argument("-v", "--value", metavar="", help="解析记录值")
-    old_group.add_argument("-t", "--type", metavar="", default="A", help='解析记录类型，默认值: "A"')
+    old_group.add_argument("-t", "--type", metavar="", default="A", choices=RECORD_TYPES, help=f'解析记录类型, 可用值：{"|".join(RECORD_TYPES)}, 默认值: "A"')
     old_group.add_argument("-l", "--line", metavar="", default=default_line, help=f'解析线路名，默认值: "{default_line}"')
     old_group.add_argument("-L", "--ttl", metavar="", type=int, default=600, help="解析记录缓存时间，默认值: 600")
     old_group.add_argument("--record-id", metavar="", help="解析记录ID, 如果提供了记录ID，其他参数将失效")
@@ -174,14 +175,14 @@ def main_cli(dns_server: str, default_type: str = None, default_line: str = "def
     new_group = change_parameter.add_argument_group("new record arguments")
     new_group.add_argument("-nn", "--new-name", metavar="", help="子域名")
     new_group.add_argument("-nv", "--new-value", metavar="", help="解析记录值")
-    new_group.add_argument("-nt", "--new-type", metavar="", help='解析记录类型')
+    new_group.add_argument("-nt", "--new-type", metavar="", choices=RECORD_TYPES, help=f'解析记录类型, 可用值：{"|".join(RECORD_TYPES)}')
     new_group.add_argument("-nl", "--new-line", metavar="", help='解析线路名')
     new_group.add_argument("-nL", "--new-ttl", metavar="", type=int, help="解析记录缓存时间")
     dnscli.add_subparser(name="change", help="修改/更新 DNS 解析记录", parents=[auth_parameter, prettyprint_parameter, change_parameter], aliases=["update"])
 
     # delete or del
-    delete_parameter = dnscli.public_parameter(default_type=default_type, default_line=default_line)
-    delete_parameter.add_argument("--record-id", metavar="", help="解析记录ID")
+    delete_parameter = dnscli.public_parameter(default_type=default_type, default_line=None)
+    delete_parameter.add_argument("--record-id", metavar="", help="解析记录ID, 如果提供了记录ID，其他参数将失效")
     dnscli.add_subparser(name="delete", help="删除 DNS 解析记录", parents=[auth_parameter, prettyprint_parameter, delete_parameter], aliases=["del"])
 
     # configure or config

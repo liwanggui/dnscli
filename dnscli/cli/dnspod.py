@@ -3,36 +3,36 @@ from ..dns.dnspod import DnsPodApi
 
 DNS_SERVER = "dnspod"
 
-def get_domains(dns, header=True, border=True, number=True):
+def get_domains(dns, args):
     title = ("域名", "创建时间", "记录数")
     data = [[d.domain_name, d.create_time, d.record_count] for d in dns.get_domain()]
-    return prettyprint(title, data, header=header, border=border, number=number)
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def get_lines(dns, args, header=True, border=True, number=True):
+def get_lines(dns, args):
     title = ["线路名"]
     result = dns.get_lines(args.domain)
     data = [[v] for v in result]
-    return prettyprint(title, data, header=header, border=border, number=number)
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def get_records(dns, args, header=True, border=True, number=True):
+def get_records(dns, args):
     title = ("子域名", "记录类型", "记录值", "线路", "TTL", "记录 ID", "创建时间", "更新时间")
     record_list = dns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
     data = [[r.sub_domain, r.type, r.value, r.line, r.ttl, r.record_id, r.create_timestamp, r.update_timestamp] for r in record_list]
     data = sorted(data, key= lambda x: x[1]) # 按记录类型排序
-    return prettyprint(title, data, header=header, border=border, number=number)
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def create_record(dns, args, header=True, border=True, number=True):
+def create_record(dns, args):
     title = ("子域名", "记录类型", "记录值", "线路", "TTL", "执行状态")
     data = []
     record = dns.get_record(domain=args.domain, sub_domain=args.name, record_type=args.type, line=args.line)
     if record and args.value in [r.value for r in record]:
         data.append([args.name, args.type, args.value, args.line, args.ttl, "记录已存在"])
     else:
-        code = dns.create_record(domain=args.domain, sub_domain=args.name, record_type=args.type, value=args.value, line=args.line, ttl=args.ttl)
+        code = dns.create_record(domain=args.domain, sub_domain=args.name, record_type=args.type, value=args.value, line=args.line, ttl=args.ttl, priority=args.priority)
         data.append([args.name, args.type, args.value, args.line, args.ttl, "创建成功" if code else "创建失败"])
-    prettyprint(title, data, header=header, border=border, number=number)
+    prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def _change_record(dns, args, header=True, border=True, number=True):
+def _change_record(dns, args):
     title = ("子域名", "记录类型", "记录值", "线路", "TTL", "记录ID", "执行状态")
     data = []
     args.new_name = args.new_name or args.name
@@ -57,9 +57,9 @@ def _change_record(dns, args, header=True, border=True, number=True):
         data[0].append("修改成功")
     else:
         data[0].append("修改失败")
-    return prettyprint(title, data, header=header, border=border, number=number)
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
-def change_record(dns, args, header=True, border=True, number=True):
+def change_record(dns, args):
     if args.name and args.value:
         records = dns.get_record(domain=args.domain, sub_domain=args.name, 
                                  record_type=args.type, line=args.line, keyword=args.value)
@@ -85,13 +85,16 @@ def change_record(dns, args, header=True, border=True, number=True):
                 break
     else:
         raise SystemExit("缺少必要的参数，请检查后重试")
-    return _change_record(dns, args, header=header, border=border, number=number)
+    return _change_record(dns, args, header=args.header, border=args.border, number=args.number)
 
-def delete_record(dns, args, header=True, border=True, number=True):
+def delete_record(dns, args):
     if args.record_id:
         title = ("子域名", "记录ID", "执行状态")
         data = [[args.name, args.record_id, "删除成功" if dns.del_record(domain=args.domain, record_id=int(args.record_id)) else "删除失败"]]
         return prettyprint(title, data)
+    
+    if args.name is None:
+        raise SystemExit("缺少必要参数, 请提供子域名后重试")
     
     if any((args.type, args.line)):
         print(args)
@@ -110,19 +113,13 @@ def delete_record(dns, args, header=True, border=True, number=True):
     
     title = ("子域名", "执行状态")
     data = [[args.name, "删除成功" if dns.del_record_by_domain(domain=args.domain, sub_domain=args.name) else "删除失败"]]
-    return prettyprint(title, data, header=header, border=border, number=number)
-
+    return prettyprint(title, data, header=args.header, border=args.border, number=args.number)
 
 def main():
     args = main_cli(DNS_SERVER, default_line="默认")
-    # print(args)
 
     if args.func in ("configure", "config"):
         return write_config(DNS_SERVER, args.secret_id, args.secret_key)
-
-    header = not args.no_header
-    border = not args.no_border
-    number = not args.no_number
 
     if all((args.secret_id, args.secret_key)):
         secret_id = args.secret_id
@@ -138,19 +135,19 @@ def main():
     dns = DnsPodApi(secret_id, secret_key)
 
     if args.func in ("list-line", "ll"):
-        return get_lines(dns, args, header=header, border=border, number=number)
+        return get_lines(dns, args)
 
     if args.func in ("list-domain", "ld"):
-        return get_domains(dns, header=header, border=border, number=number)
+        return get_domains(dns, args)
 
     if args.func in ("list", "ls"):
-        return get_records(dns, args, header=header, border=border, number=number)
+        return get_records(dns, args)
     
     if args.func in ("create", "add"):
-        return create_record(dns, args, header=header, border=border, number=number)
+        return create_record(dns, args)
 
     if args.func in ("change", "update"):
-        return change_record(dns, args, header=header, border=border, number=number)
+        return change_record(dns, args)
 
     if args.func in ("delete", "del"):
-        return delete_record(dns, args, header=header, border=border, number=number)
+        return delete_record(dns, args)

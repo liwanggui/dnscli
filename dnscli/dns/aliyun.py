@@ -133,7 +133,7 @@ class AliApi(DnsApi):
             page_number += 1
         return data
 
-    def create_record(self, domain: str, sub_domain: str, record_type: str, value: str, line: str = "default", ttl: int = 600) -> str:
+    def create_record(self, domain: str, sub_domain: str, record_type: str, value: str, line: str = "default", ttl: int = 600, priority: int = 10) -> str:
         add_domain_record_request = alidns_20150109_models.AddDomainRecordRequest(
             domain_name=domain,
             rr=sub_domain,
@@ -142,6 +142,8 @@ class AliApi(DnsApi):
             ttl=ttl,
             line=parse_line(line),
         )
+        if record_type == "MX":
+            add_domain_record_request.priority = priority
         runtime = util_models.RuntimeOptions()
         try:
             result = self._client.add_domain_record_with_options(

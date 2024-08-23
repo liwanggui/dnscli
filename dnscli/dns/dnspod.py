@@ -118,7 +118,7 @@ class DnsPodApi(DnsApi):
         except TencentCloudSDKException as err:
             return []
         
-    def create_record(self, domain: str, sub_domain: str, record_type: str, value: str, line: str = "默认", ttl: int = 600, **kwargs) -> str:
+    def create_record(self, domain: str, sub_domain: str, record_type: str, value: str, line: str = "默认", ttl: int = 600, priority: int = 10, **kwargs) -> str:
         """添加域名解析记录"""
         try:
             req = models.CreateRecordRequest()
@@ -131,6 +131,8 @@ class DnsPodApi(DnsApi):
                 "RecordLine": line,
                 "TTL": ttl,
             }
+            if record_type == "MX": # 设置 MX 记录优先级
+                params["MX"] = priority
             params.update(kwargs)
             req.from_json_string(json.dumps(params))
             result = self._client.CreateRecord(req)

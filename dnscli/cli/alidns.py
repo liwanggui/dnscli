@@ -78,7 +78,7 @@ def change_record(dns, args):
                 break
     else:
         raise SystemExit("缺少必要的参数，请检查后重试")
-    return _change_record(dns, args, header=args.header, border=args.border, number=args.number)
+    return _change_record(dns, args)
 
 def delete_record(dns, args):
     if args.record_id:

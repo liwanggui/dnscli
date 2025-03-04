@@ -34,3 +34,16 @@ class DNSProvider(ABC):
     def get_record_id(self, domain: str, rr: str, type_: str, value: str = None) -> str:
         """通过主机记录名称、记录类型和记录值获取记录ID"""
         pass
+
+    @abstractmethod
+    def list_domains(self) -> List[Dict[str, Any]]:
+        """获取域名列表
+        
+        Returns:
+            List[Dict[str, Any]]: 域名列表，每个域名包含以下信息：
+                - name: 域名
+                - status: 域名状态
+                - created_at: 创建时间
+                - updated_at: 更新时间
+        """
+        pass

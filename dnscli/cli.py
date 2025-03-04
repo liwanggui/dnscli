@@ -23,9 +23,53 @@ def config():
     pass
 
 @cli.group(context_settings=dict(help_option_names=["-h", "--help"]))
+def domain():
+    """域名管理相关命令"""
+    pass
+
+@cli.group(context_settings=dict(help_option_names=["-h", "--help"]))
 def record():
     """DNS记录管理相关命令"""
     pass
+
+@domain.command()
+@click.option('--provider', '-p', help='指定使用的DNS服务商配置')
+def list(provider):
+    """列出所有域名"""
+    try:
+        provider_config = get_provider_config(provider)
+        provider_type = provider_config['type']
+        credentials = provider_config['credentials']
+
+        # 根据服务商类型创建对应的DNS提供商实例
+        if provider_type == 'aliyun':
+            dns = AliyunDNS(**credentials)
+        elif provider_type == 'tencent':
+            dns = TencentDNS(**credentials)
+        elif provider_type == 'cloudflare':
+            dns = CloudflareDNS(**credentials)
+        else:
+            click.echo(f'不支持的DNS服务商类型：{provider_type}')
+            return
+
+        # 获取域名列表
+        domains = dns.list_domains()
+
+        # 创建表格并显示域名信息
+        table = PrettyTable()
+        table.field_names = ['域名', '状态', '创建时间', '更新时间']
+        for domain in domains:
+            table.add_row([
+                domain['name'],
+                domain['status'],
+                domain.get('created_at', '-'),
+                domain.get('updated_at', '-')
+            ])
+        click.echo(table)
+
+    except Exception as e:
+        click.echo(f'获取域名列表失败：{str(e)}')
+        return
 
 @config.command()
 def example():
@@ -234,8 +278,6 @@ def list(domain, provider, rr, record_type):
                     record['Value'],
                     record['Proxied']
                 ])
-        
-        click.echo('\n域名记录列表：')
         click.echo(table)
     except Exception as e:
         click.echo(f'错误: {str(e)}')
@@ -258,17 +300,23 @@ def add(domain, rr, type, value, provider, proxy):
             dns = TencentDNS(**config['credentials'])
         else:  # cloudflare
             dns = CloudflareDNS(**config['credentials'])
-        
-        if dns.add_record(domain, rr, type, value, proxy if config['type'] == 'cloudflare' else None):
-            click.echo('记录添加成功')
+
+        if config['type'] == 'cloudflare':
+            if dns.add_record(domain, rr, type, value, proxy):
+                click.echo('记录添加成功')
+            else:
+                click.echo('记录添加失败')
         else:
-            click.echo('记录添加失败')
+            if dns.add_record(domain, rr, type, value):
+                click.echo('记录添加成功')
+            else:
+                click.echo('记录添加失败')
     except Exception as e:
         click.echo(f'错误: {str(e)}')
 
 @record.command()
 @click.argument('domain', metavar='域名')
-@click.argument('record_id', metavar='记录ID')
+@click.argument('record_id', nargs=-1, metavar='记录ID...')
 @click.option('--provider', '-p', help='指定使用的DNS服务商配置')
 def delete(domain, record_id, provider):
     """删除DNS记录"""
@@ -281,11 +329,11 @@ def delete(domain, record_id, provider):
             dns = TencentDNS(**config['credentials'])
         else:  # cloudflare
             dns = CloudflareDNS(**config['credentials'])
-        
-        if dns.delete_record(domain, record_id):
-            click.echo('记录删除成功')
-        else:
-            click.echo('记录删除失败')
+        for rid in record_id:
+            if dns.delete_record(domain, rid):
+                click.echo(f'{rid} 记录删除成功')
+            else:
+                click.echo(f'{rid} 记录删除失败')
     except Exception as e:
         click.echo(f'错误: {str(e)}')
 

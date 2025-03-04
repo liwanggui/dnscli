@@ -51,7 +51,8 @@ class TencentDNS(DNSProvider):
         try:
             self.client.CreateRecord(request)
             return True
-        except Exception:
+        except Exception as e:
+            print(f"添加记录失败：{str(e)}")
             return False
 
     def delete_record(self, domain: str, record_id: str) -> bool:
@@ -94,3 +95,30 @@ class TencentDNS(DNSProvider):
         except Exception:
             pass
         return ''
+
+    def list_domains(self) -> List[Dict[str, Any]]:
+        request = models.DescribeDomainListRequest()
+        request.Limit = 100  # 设置每页记录数
+        offset = 0
+        all_domains = []
+
+        while True:
+            request.Offset = offset
+            try:
+                response = self.client.DescribeDomainList(request)
+                domains = response.DomainList
+                for domain in domains:
+                    all_domains.append({
+                        'name': domain.Name,
+                        'status': domain.Status,
+                        'created_at': domain.CreatedOn,
+                        'updated_at': domain.UpdatedOn
+                    })
+
+                if len(domains) < request.Limit:
+                    break
+                offset += len(domains)
+            except Exception as e:
+                raise Exception(f'获取域名列表失败：{str(e)}')
+
+        return all_domains

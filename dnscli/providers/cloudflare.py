@@ -98,12 +98,56 @@ class CloudflareDNS(DNSProvider):
             json={
                 'type': type_,
                 'name': f'{rr}.{domain}' if rr else domain,
-                'content': value,
-                'proxied': False
+                'content': value
             }
         )
         response.raise_for_status()
         return response.json()['success']
+
+    def get_record_id(self, domain: str, rr: str, type_: str, value: str = None) -> str:
+        """通过主机记录名称、记录类型和记录值获取记录ID"""
+        zone_id = self._get_zone_id(domain)
+        params = {
+            'type': type_,
+            'name': f'{rr}.{domain}' if rr else domain
+        }
+        if value:
+            params['content'] = value
+
+        response = requests.get(
+            f'{self.base_url}/zones/{zone_id}/dns_records',
+            headers=self.headers,
+            params=params
+        )
+        response.raise_for_status()
+        data = response.json()
+        if data['success'] and data['result']:
+            return data['result'][0]['id']
+        return ''
+
+    def list_domains(self) -> List[Dict[str, Any]]:
+        """获取域名列表"""
+        response = requests.get(
+            f'{self.base_url}/zones',
+            headers=self.headers,
+            params={'per_page': 100}
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        if not data['success']:
+            raise Exception('获取域名列表失败')
+
+        all_domains = []
+        for zone in data['result']:
+            all_domains.append({
+                'name': zone['name'],
+                'status': zone['status'],
+                'created_at': zone['created_on'],
+                'updated_at': zone['modified_on']
+            })
+
+        return all_domains
 
     def get_record_id(self, domain: str, rr: str, type_: str, value: str = None) -> str:
         """通过主机记录名称、记录类型和记录值获取记录ID"""

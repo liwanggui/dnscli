@@ -9,6 +9,7 @@ from aliyunsdkalidns.request.v20150109.DescribeDomainRecordsRequest import Descr
 from aliyunsdkalidns.request.v20150109.AddDomainRecordRequest import AddDomainRecordRequest
 from aliyunsdkalidns.request.v20150109.DeleteDomainRecordRequest import DeleteDomainRecordRequest
 from aliyunsdkalidns.request.v20150109.UpdateDomainRecordRequest import UpdateDomainRecordRequest
+from aliyunsdkalidns.request.v20150109.DescribeDomainsRequest import DescribeDomainsRequest
 
 from .base import DNSProvider
 
@@ -98,3 +99,32 @@ class AliyunDNS(DNSProvider):
         except Exception:
             pass
         return ''
+
+    def list_domains(self) -> List[Dict[str, Any]]:
+        request = DescribeDomainsRequest()
+        request.set_PageSize(100)  # 设置每页记录数
+        page_number = 1
+        all_domains = []
+
+        while True:
+            request.set_PageNumber(page_number)
+            try:
+                response = self.client.do_action_with_exception(request)
+                response = json.loads(response)
+                domains = response['Domains']['Domain']
+                for domain in domains:
+                    all_domains.append({
+                        'name': domain['DomainName'],
+                        'status': domain.get('DomainStatus', 'UNKNOWN'),  # 使用get方法获取状态，如果不存在则返回UNKNOWN
+                        'created_at': domain.get('CreateTime', '-'),
+                        'updated_at': domain.get('CreateTime', '-')  # 阿里云API没有提供更新时间
+                    })
+
+                total_count = response['TotalCount']
+                if len(all_domains) >= total_count:
+                    break
+                page_number += 1
+            except Exception as e:
+                raise Exception(f'获取域名列表失败：{str(e)}')
+
+        return all_domains

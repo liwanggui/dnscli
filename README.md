@@ -1,4 +1,4 @@
-# DNSCLI2
+# DNSCLI
 
 一个用于管理多云DNS记录的命令行工具，支持阿里云DNS、腾讯云DNS和Cloudflare DNS。
 

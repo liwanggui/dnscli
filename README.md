@@ -25,6 +25,7 @@ pip install dnscli
 - click >= 8.0.0
 - PyYAML >= 6.0
 - prettytable >= 3.14.0
+- cloudflare>=4.0.0
 - aliyun-python-sdk-core >= 2.13.36
 - aliyun-python-sdk-alidns >= 2.6.42
 - tencentcloud-sdk-python >= 3.0.0
@@ -108,7 +109,7 @@ dnscli record add example.com www A "192.168.1.1" --proxied
 dnscli record update example.com <record-id> www A "192.168.1.2"
 
 # 更新CDN代理状态（仅Cloudflare）
-dnscli record update example.com <record-id> www A "192.168.1.2" --proxy
+dnscli record update example.com <record-id> www A "192.168.1.2" --proxied
 ```
 
 ### 删除DNS记录

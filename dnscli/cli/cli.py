@@ -9,7 +9,7 @@ from .domain import domain
 from .record import record
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(version=__version__, prog_name='dnscli', message='%(prog)s %(version)s')
+@click.version_option(__version__, "-v", "--version", prog_name='dnscli', message='%(prog)s %(version)s')
 def cli():
     """dnscli - 一个用于管理多云DNS记录的命令行工具"""
     pass

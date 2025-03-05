@@ -16,7 +16,7 @@ class DNSProvider(ABC):
         pass
 
     @abstractmethod
-    def add_record(self, domain: str, rr: str, type_: str, value: str) -> bool:
+    def add_record(self, domain: str, rr: str, type_: str, value: str, **kwargs) -> bool:
         """添加域名记录"""
         pass
 
@@ -26,7 +26,7 @@ class DNSProvider(ABC):
         pass
 
     @abstractmethod
-    def update_record(self, domain: str, record_id: str, rr: str, type_: str, value: str) -> bool:
+    def update_record(self, domain: str, record_id: str, rr: str, type_: str, value: str, **kwargs) -> bool:
         """更新域名记录"""
         pass
 

@@ -21,7 +21,7 @@ def save_config(config: Dict[str, Any]) -> None:
     with open(CONFIG_FILE, 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
 
-def get_provider_config(provider: str = None) -> Dict[str, Any]:
+def get_config(provider: str = None) -> Dict[str, Any]:
     """获取指定云服务商的配置，如果未指定provider则返回默认配置"""
     config = load_config()
     if not provider:
@@ -31,7 +31,7 @@ def get_provider_config(provider: str = None) -> Dict[str, Any]:
         raise KeyError(f'未找到{provider}的配置信息')
     return config['configs'][provider]
 
-def update_provider_config(provider: str, provider_type: str, credentials: Dict[str, str]) -> None:
+def update_config(provider: str, provider_type: str, credentials: Dict[str, str]) -> None:
     """更新云服务商的配置"""
     config = load_config()
     if 'configs' not in config:

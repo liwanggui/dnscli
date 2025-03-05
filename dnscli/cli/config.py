@@ -57,7 +57,9 @@ def add(config_name, provider):
         }
     else:  # cloudflare
         credentials = {
-            'api_token': click.prompt('请输入API Token', hide_input=True)
+            'api_token': click.prompt('请输入API Token', default='', hide_input=True),
+            'api_email': click.prompt('请输入账号名 Email', default=''),
+            'api_key': click.prompt('请输入Global API Key', default='', hide_input=True)
         }
 
     # 更新配置
@@ -100,8 +102,8 @@ def delete(name):
     save_config(config)
     click.echo(f'配置 {name} 已删除')
 
-@config.command()
-def list():
+@config.command(name="list")
+def _list():
     """列出所有配置"""
     config = load_config()
     if not config or 'configs' not in config:

@@ -3,33 +3,23 @@ import click
 
 from prettytable import PrettyTable
 
-from ..config import get_provider_config
-from ..providers import AliyunDNS, TencentDNS, CloudflareDNS
+from ..providers import get_provider_api
+from ..config import get_config
 
 @click.group()
 def domain():
     """域名管理相关命令"""
     pass
 
-@domain.command()
+@domain.command(name="list")
 @click.option('--provider', '-p', help='指定使用的DNS服务商配置')
-def list(provider):
+def _list(provider):
     """列出所有域名"""
     try:
-        provider_config = get_provider_config(provider)
+        provider_config = get_config(provider)
         provider_type = provider_config['type']
         credentials = provider_config['credentials']
-
-        # 根据服务商类型创建对应的DNS提供商实例
-        if provider_type == 'aliyun':
-            dns = AliyunDNS(**credentials)
-        elif provider_type == 'tencent':
-            dns = TencentDNS(**credentials)
-        elif provider_type == 'cloudflare':
-            dns = CloudflareDNS(**credentials)
-        else:
-            click.echo(f'不支持的DNS服务商类型：{provider_type}')
-            return
+        dns = get_provider_api(provider_type, credentials)
 
         # 获取域名列表
         domains = dns.list_domains()

@@ -48,7 +48,7 @@ class AliyunDNS(DNSProvider):
 
         return all_records
 
-    def add_record(self, domain: str, rr: str, type_: str, value: str) -> bool:
+    def add_record(self, domain: str, rr: str, type_: str, value: str, **kwargs) -> bool:
         request = AddDomainRecordRequest()
         request.set_DomainName(domain)
         request.set_RR(rr)
@@ -69,7 +69,7 @@ class AliyunDNS(DNSProvider):
         except Exception:
             return False
 
-    def update_record(self, domain: str, record_id: str, rr: str, type_: str, value: str) -> bool:
+    def update_record(self, domain: str, record_id: str, rr: str, type_: str, value: str, **kwargs) -> bool:
         request = UpdateDomainRecordRequest()
         request.set_RecordId(record_id)
         request.set_RR(rr)

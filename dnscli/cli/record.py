@@ -97,7 +97,6 @@ def add(domain, rr, type, value, provider, proxied):
         provider_type = config['type']
         credentials = config['credentials']
         dns = get_provider_api(provider_type, credentials)
-        print(proxied)
         if dns.add_record(domain, rr, type, value, proxied=proxied):
             click.echo('记录添加成功')
         else:

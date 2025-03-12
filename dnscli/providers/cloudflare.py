@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Any, List
-import requests
+from typing import Dict, Any, List, Optional
+
 from .base import DNSProvider
 from cloudflare import Cloudflare, BadRequestError
 
 
 class CloudflareDNS(DNSProvider):
-    def __init__(self, api_token: str | None = None, api_key: str | None = None, api_email: str | None = None):
+    def __init__(self, api_token: Optional[str] = None, api_key: Optional[str] = None, api_email: Optional[str] = None):
         if api_token.strip():
             self._cf = Cloudflare(api_token=api_token)
         else:

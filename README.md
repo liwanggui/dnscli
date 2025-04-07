@@ -39,17 +39,20 @@ pip install dnscli
 ```yaml
 default: aliyun  # 默认使用的配置名称
 configs:
-  aliyun:  # 阿里云配置
-    provider: aliyun
-    access_key_id: your_access_key_id
-    access_key_secret: your_access_key_secret
-  tencent:  # 腾讯云配置
-    provider: tencent
-    secret_id: your_secret_id
-    secret_key: your_secret_key
-  cloudflare:  # Cloudflare配置
-    provider: cloudflare
-    token: your_api_token
+  cf:
+    credentials:
+      api_token: your_api_token
+    type: cloudflare
+  tencent: # 腾讯云配置
+    credentials:
+      secret_id: your_secret_id
+      secret_key: your_secret_key
+    type: tencent
+  aliyun: # 阿里云配置
+    credentials:
+      access_key_id: your_access_key_id
+      access_key_secret: your_access_key_secret
+    type: aliyun
 ```
 
 ### 生成示例配置
